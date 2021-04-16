@@ -40,9 +40,8 @@ class VNET(BaseTest):
         self.vnet_batch = 8
         self.packets = []
         self.vxlan_srcport_range_enabled = False
-        self.lower_bound_port = 0
-        self.upper_bound_port = 0
-
+        self.vxlan_srcport_lower_bound = 0
+        self.vxlan_srcport_upper_bound = 65535
 
     def cmd(self, cmds):
         process = subprocess.Popen(cmds,
@@ -196,10 +195,10 @@ class VNET(BaseTest):
             self.vxlan_srcport_range_enabled = self.test_params['vxlan_srcport_range_enabled']
 
         if 'lower_bound_port' in self.test_params and self.test_params['lower_bound_port']:
-            self.lower_bound_port = self.test_params['lower_bound_port']
+            self.vxlan_srcport_lower_bound = self.test_params['lower_bound_port']
 
         if 'upper_bound_port' in self.test_params and self.test_params['upper_bound_port']:
-            self.upper_bound_port = self.test_params['upper_bound_port']
+            self.vxlan_srcport_upper_bound = self.test_params['upper_bound_port']
 
         config = self.test_params['config_file']
 
@@ -320,13 +319,13 @@ class VNET(BaseTest):
 
         print
         for test in self.tests:
-            logging.info(test['name'])
+            print test['name']
             self.FromServer(test)
-            logging.info("FromServer passed")
+            print "  FromServer passed"
             self.FromVM(test)
-            logging.info("FromVM  passed")
+            print "  FromVM  passed"
             self.Serv2Serv(test)
-            logging.info("Serv2Serv passed")
+            print "  Serv2Serv passed"
 
     def FromVM(self, test):
         rv = True
@@ -483,11 +482,11 @@ class VNET(BaseTest):
             logging.info(log_str)
 
             if not self.routes_removed:
-                received_pkt = verify_packet_any_port(self, masked_exp_pkt, self.net_ports)[1]
+                status, received_pkt = verify_packet_any_port(self, masked_exp_pkt, self.net_ports)
                 if self.vxlan_srcport_range_enabled:
                     scapy_pkt  = Ether(received_pkt)
-                    assert self.lower_bound_port <= scapy_pkt.sport and self.upper_bound_port >=  scapy_pkt.sport, ("Received packet has UDP src port {} "
-                        "that is not beetween expected range {} - {}".format(scapy_pkt.sport, self.lower_bound_port, self.upper_bound_port))
+                    assert (self.vxlan_srcport_lower_bound <= scapy_pkt.sport) and (self.vxlan_srcport_upper_bound >=  scapy_pkt.sport), ("Received packet has UDP src port {} "
+                        "that is not in expected range {} - {}".format(scapy_pkt.sport, self.vxlan_srcport_lower_bound, self.vxlan_srcport_upper_bound))
             else:
                 verify_no_packet_any(self, masked_exp_pkt, self.net_ports)
 
@@ -512,7 +511,7 @@ class VNET(BaseTest):
             serv_tests = rif_tests + peer_tests
 
             for serv in serv_tests:
-                logging.info("Testing Serv2Serv")
+                print "  Testing Serv2Serv "
                 pkt = simple_tcp_packet(
                     pktlen=pkt_len,
                     eth_dst=self.dut_mac,

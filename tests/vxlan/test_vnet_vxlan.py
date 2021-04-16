@@ -4,14 +4,12 @@ import pytest
 
 from datetime import datetime
 from tests.ptf_runner import ptf_runner
-from vnet_constants import CLEANUP_KEY
+from vnet_constants import CLEANUP_KEY, LOWER_BOUND_UDP_PORT_KEY, UPPER_BOUND_UDP_PORT_KEY
 from vnet_utils import generate_dut_config_files, safe_open_template, \
                        apply_dut_config_files, cleanup_dut_vnets, cleanup_vxlan_tunnels, cleanup_vnet_routes
 
 from tests.common.fixtures.ptfhost_utils import remove_ip_addresses, change_mac_addresses, \
                                                 copy_arp_responder_py, copy_ptftests_directory
-
-from vnet_constants import LOWER_BOUND_UDP_PORT, UPPER_BOUND_UDP_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,7 @@ def get_vxlan_srcport_range_enabled(duthost):
     dut_platform = duthost.facts["platform"]
     dut_hwsku = duthost.facts["hwsku"]
     sai_profile = "/usr/share/sonic/device/%s/%s/sai.profile" % (dut_platform, dut_hwsku)
-    cmd = "cat {} | grep SAI_VXLAN_SRCPORT_RANGE_ENABLE | cut -d'=' -f2".format(sai_profile)
+    cmd = "grep SAI_VXLAN_SRCPORT_RANGE_ENABLE {} | cut -d'=' -f2".format(sai_profile)
     vxlan_srcport_range_enabled = duthost.shell(cmd)["stdout"].strip() == "1"
 
     return vxlan_srcport_range_enabled
@@ -162,8 +160,8 @@ def test_vnet_vxlan(setup, vxlan_status, duthosts, rand_one_dut_hostname, ptfhos
                   "sonic_admin_password": creds.get('sonicadmin_password'),
                   "dut_host": duthost.host.options['inventory_manager'].get_host(duthost.hostname).vars['ansible_host'],
                   "vxlan_srcport_range_enabled": vxlan_srcport_range_enabled,
-                  "lower_bound_port" : vnet_test_params[LOWER_BOUND_UDP_PORT],
-                  "upper_bound_port" : vnet_test_params[UPPER_BOUND_UDP_PORT]
+                  "lower_bound_port" : vnet_test_params[LOWER_BOUND_UDP_PORT_KEY],
+                  "upper_bound_port" : vnet_test_params[UPPER_BOUND_UDP_PORT_KEY]
                   }
     if scenario == "Cleanup":
         ptf_params["routes_removed"] = True
